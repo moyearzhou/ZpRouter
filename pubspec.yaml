@@ -1,10 +1,16 @@
 name: zp_router
 description: Lightweight route contract and dispatch core for modular Dart and Flutter apps.
 version: 0.1.0
-repository: git@github.com:moyearzhou/ZpRouter.git
+repository: ssh://git@github.com/moyearzhou/ZpRouter.git
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
 
+dependencies:
+  flutter:
+    sdk: flutter
+
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   test: ^1.25.0
