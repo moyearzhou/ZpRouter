@@ -22,6 +22,8 @@
 - `ZpRouteResult`: structured dispatch / validation result.
 - `ZpRouteRegistry`: immutable route spec lookup.
 - `ZpRouteDispatcher`: pure dispatcher interface for host apps to implement.
+- `ZpRouteRuntimeDispatcher`: default runtime chain for lookup, validation, gate, handler, fallback, and logging.
+- `ZpRouteGate` / `ZpRouteFallback` / `ZpRouteLogger`: host-provided extension points for login checks, fallback routing, and observability.
 
 ## Suggested Layering
 
@@ -34,6 +36,9 @@ Legacy MyRouter / NeatRouter
   -> converts old route names into ZpRouteRequest
 
 Host app / Flutter module
-  -> owns page factory, login gate, fallback UI, logging
+  -> owns page factory / route handler, login gate, fallback UI, logging
   -> depends on ZpRouter core contracts
 ```
+
+The runtime dispatcher is still UI-agnostic: it does not know about Flutter
+`BuildContext`, app-specific login providers, page classes, or business models.
