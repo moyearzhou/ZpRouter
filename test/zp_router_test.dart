@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:zp_router/zp_router.dart';
+import 'package:zp_router/zp_router_compat.dart';
 
 void main() {
   group('ZpRouteSpec', () {
@@ -243,6 +243,49 @@ void main() {
       expect(events.last.request.params['filePath'], '<sensitive>');
       expect(
           events.last.request.params['filePath'], isNot('/private/file.pdf'));
+    });
+  });
+
+  group('ZPRoute compat', () {
+    test('keeps legacy enum names and converts specs to core model', () {
+      const compatSpec = ZPRouteSpec(
+        route: 'library.collection.select',
+        path: '/library/collection/select',
+        loginPolicy: ZPLoginPolicy.zoteroRequired,
+        fallbackType: ZPFallbackType.login,
+        params: <String, ZPRouteParamSpec>{
+          'isMultiSelect': ZPRouteParamSpec(
+            type: ZPRouteParamType.bool,
+            defaultValue: true,
+          ),
+          'failCount': ZPRouteParamSpec(
+            type: ZPRouteParamType.int,
+            defaultValue: 0,
+          ),
+        },
+      );
+
+      final result = compatSpec.validate(const <String, Object?>{});
+      final coreSpec = compatSpec.toCore();
+
+      expect(result.valid, isTrue);
+      expect(result.params['isMultiSelect'], true);
+      expect(coreSpec.params['isMultiSelect']?.type, ZpRouteParamType.boolean);
+      expect(coreSpec.params['failCount']?.type, ZpRouteParamType.integer);
+    });
+
+    test('converts legacy route requests to core requests', () {
+      const request = ZPRouteRequest(
+        route: 'app.settings',
+        routeSource: ZPRouteSource.legacy,
+        legacyRoute: 'settingsPage',
+      );
+
+      final coreRequest = request.toCore();
+
+      expect(coreRequest.route, 'app.settings');
+      expect(coreRequest.source, ZpRouteSource.legacy);
+      expect(coreRequest.legacyRoute, 'settingsPage');
     });
   });
 }
