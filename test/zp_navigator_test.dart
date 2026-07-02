@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zp_router/zp_router.dart';
-import 'package:zp_router/zp_router_compat.dart' as compat;
 
 void main() {
   tearDown(() {
     ZpNavigator.instance.resetForTest();
   });
 
-  testWidgets('push uses configured route factory', (tester) async {
+  testWidgets('push uses configured page resolver', (tester) async {
     final visited = <String?>[];
     ZpNavigator.instance.configure(
-      routeFactory: (settings, uniqueId) {
-        visited.add(settings.name);
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => const Text('target'),
-        );
+      pageResolver: (context, request) {
+        visited.add(request.route);
+        return const Text('target');
       },
     );
 
@@ -41,21 +37,12 @@ void main() {
     expect(find.text('target'), findsOneWidget);
   });
 
-  testWidgets('pushRequest accepts compat request through toCore', (
-    tester,
-  ) async {
+  testWidgets('pushRequest resolves typed request directly', (tester) async {
     ZpRouteRequest? captured;
     ZpNavigator.instance.configure(
-      routeFactory: (settings, uniqueId) => null,
-      requestRouteFactory: (request, uniqueId, context) {
+      pageResolver: (context, request) {
         captured = request;
-        return MaterialPageRoute<void>(
-          settings: RouteSettings(
-            name: request.route,
-            arguments: request.params,
-          ),
-          builder: (_) => const Text('request target'),
-        );
+        return const Text('request target');
       },
     );
 
@@ -66,7 +53,7 @@ void main() {
           builder: (context) {
             return TextButton(
               onPressed: () => ZpNavigator.instance.pushRequest<void>(
-                const compat.ZPRouteRequest(
+                const ZpRouteRequest(
                   route: 'library.item.detail',
                   params: <String, Object?>{'itemKey': 'A'},
                 ),

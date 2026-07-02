@@ -5,18 +5,18 @@
 ## Goals
 
 - Provide shared route contracts for multiple modules.
-- Keep the core independent from Flutter UI, app shell, Zotero runtime state, and business models.
-- Let legacy routers such as `MyRouter` and `NeatRouter` become facade / adapter layers.
+- Provide one navigation entry for app and module code.
+- Keep route contracts independent from app shell, Zotero runtime state, and business models.
+- Keep page construction behind host-registered resolvers.
 
 ## Non Goals
 
-- No Flutter `Route` or `BuildContext` dependency in the core package.
 - No direct dependency on `module_base`, `module_library`, or Zotero providers.
 - No app-specific page construction.
 
 ## Initial Core
 
-- `ZpRouteRequest`: typed route request with source, version, params, and optional legacy route.
+- `ZpRouteRequest`: typed route request with source, version, and params.
 - `ZpRouteSpec`: route contract with path, login policy, fallback type, and param specs.
 - `ZpRouteParamSpec`: param type, required/default/allowed/sensitive rules.
 - `ZpRouteResult`: structured dispatch / validation result.
@@ -24,6 +24,7 @@
 - `ZpRouteDispatcher`: pure dispatcher interface for host apps to implement.
 - `ZpRouteRuntimeDispatcher`: default runtime chain for lookup, validation, gate, handler, fallback, and logging.
 - `ZpRouteGate` / `ZpRouteFallback` / `ZpRouteLogger`: host-provided extension points for login checks, fallback routing, and observability.
+- `ZpNavigator`: Flutter navigation entry with host-registered page resolver and platform route transition.
 
 ## Suggested Layering
 
@@ -31,14 +32,11 @@
 Business module
   -> builds ZpRouteRequest
 
-Legacy MyRouter / NeatRouter
-  -> facade / adapter
-  -> converts old route names into ZpRouteRequest
-
 Host app / Flutter module
-  -> owns page factory / route handler, login gate, fallback UI, logging
-  -> depends on ZpRouter core contracts
+  -> registers route specs, page resolver, login gate, fallback UI, logging
+  -> delegates Route creation and navigation to ZpNavigator
 ```
 
-The runtime dispatcher is still UI-agnostic: it does not know about Flutter
-`BuildContext`, app-specific login providers, page classes, or business models.
+The route contract layer still avoids app-specific login providers, page classes,
+and business models. Flutter page construction stays behind the resolver
+registered by the host app.

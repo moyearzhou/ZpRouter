@@ -1,18 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'zp_page_route.dart';
 import 'zp_route_request.dart';
 import 'zp_route_result.dart';
-
-typedef ZpRouteFactory = Route<dynamic>? Function(
-  RouteSettings settings,
-  String? uniqueId,
-);
-
-typedef ZpRequestRouteFactory = Route<dynamic>? Function(
-  ZpRouteRequest request,
-  String? uniqueId,
-  BuildContext context,
-);
 
 class ZpNavigator {
   static final ZpNavigator instance = ZpNavigator._internal();
@@ -24,21 +14,21 @@ class ZpNavigator {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  ZpRouteFactory? _routeFactory;
-  ZpRequestRouteFactory? _requestRouteFactory;
+  ZpPageResolver? _pageResolver;
+  ZpPageRouteBuilder _pageRouteBuilder = zpPlatformPageRoute;
 
   void configure({
-    required ZpRouteFactory routeFactory,
-    ZpRequestRouteFactory? requestRouteFactory,
+    required ZpPageResolver pageResolver,
+    ZpPageRouteBuilder pageRouteBuilder = zpPlatformPageRoute,
   }) {
-    _routeFactory = routeFactory;
-    _requestRouteFactory = requestRouteFactory;
+    _pageResolver = pageResolver;
+    _pageRouteBuilder = pageRouteBuilder;
   }
 
   @visibleForTesting
   void resetForTest() {
-    _routeFactory = null;
-    _requestRouteFactory = null;
+    _pageResolver = null;
+    _pageRouteBuilder = zpPlatformPageRoute;
   }
 
   Future<T> push<T extends Object?>(
@@ -49,7 +39,14 @@ class ZpNavigator {
   }) async {
     final context = _requireContext();
     final route = _requireRoute(
-      _buildNamedRoute(name, arguments: arguments),
+      _buildRequestRoute(
+        ZpRouteRequest(
+          route: name,
+          params: <String, Object?>{
+            ...?arguments,
+          },
+        ),
+      ),
       name,
     );
     final result = await Navigator.of(context).push(route);
@@ -64,7 +61,7 @@ class ZpNavigator {
     final normalizedRequest = _normalizeRequest(request);
     final context = _requireContext();
     final route = _requireRoute(
-      _buildRequestRoute(normalizedRequest, context),
+      _buildRequestRoute(normalizedRequest),
       normalizedRequest.route,
     );
     final result = await Navigator.of(context).push(route);
@@ -78,7 +75,14 @@ class ZpNavigator {
   }) async {
     final context = _requireContext();
     final route = _requireRoute(
-      _buildNamedRoute(name, arguments: arguments),
+      _buildRequestRoute(
+        ZpRouteRequest(
+          route: name,
+          params: <String, Object?>{
+            ...?arguments,
+          },
+        ),
+      ),
       name,
     );
     final result = await Navigator.of(context).pushAndRemoveUntil(
@@ -95,7 +99,7 @@ class ZpNavigator {
     final normalizedRequest = _normalizeRequest(request);
     final context = _requireContext();
     final route = _requireRoute(
-      _buildRequestRoute(normalizedRequest, context),
+      _buildRequestRoute(normalizedRequest),
       normalizedRequest.route,
     );
     final result = await Navigator.of(context).pushAndRemoveUntil(
@@ -140,30 +144,45 @@ class ZpNavigator {
     return context;
   }
 
-  Route<dynamic>? _buildNamedRoute(
-    String name, {
-    Map<String, dynamic>? arguments,
-  }) {
-    final routeFactory = _routeFactory;
-    if (routeFactory == null) {
-      throw StateError('ZpNavigator routeFactory is not configured');
-    }
-    return routeFactory(RouteSettings(name: name, arguments: arguments), null);
+  Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final arguments = settings.arguments;
+    final params = arguments is Map<String, Object?>
+        ? arguments
+        : arguments is Map<String, dynamic>
+            ? arguments.map<String, Object?>(
+                (key, value) => MapEntry<String, Object?>(key, value),
+              )
+            : arguments == null
+                ? const <String, Object?>{}
+                : <String, Object?>{'value': arguments};
+    return _buildRequestRoute(
+      ZpRouteRequest(route: settings.name ?? '', params: params),
+      settings: settings,
+    );
   }
 
   Route<dynamic>? _buildRequestRoute(
-    ZpRouteRequest request,
-    BuildContext context,
-  ) {
-    final requestRouteFactory = _requestRouteFactory;
-    if (requestRouteFactory != null) {
-      return requestRouteFactory(request, null, context);
+    ZpRouteRequest request, {
+    RouteSettings? settings,
+  }) {
+    final resolver = _pageResolver;
+    if (resolver == null) {
+      throw StateError('ZpNavigator pageResolver is not configured');
     }
-    return _buildNamedRoute(
-      request.route,
-      arguments: request.params.map<String, dynamic>(
-        (key, value) => MapEntry(key, value),
+    return _pageRouteBuilder(
+      Builder(
+        builder: (context) {
+          // Resolve pages inside the route builder so MaterialApp.onGenerateRoute
+          // does not depend on navigatorKey.currentContext during app startup.
+          return resolver(context, request) ??
+              ErrorWidget('Route not found: ${request.route}');
+        },
       ),
+      settings ??
+          RouteSettings(
+            name: request.route,
+            arguments: request.params,
+          ),
     );
   }
 
@@ -172,20 +191,10 @@ class ZpNavigator {
       return request;
     }
 
-    final dynamic compatRequest = request;
-    try {
-      final coreRequest = compatRequest.toCore();
-      if (coreRequest is ZpRouteRequest) {
-        return coreRequest;
-      }
-    } on NoSuchMethodError {
-      // Fall through to the typed error below.
-    }
-
     throw ArgumentError.value(
       request,
       'request',
-      'Expected ZpRouteRequest or a compat request exposing toCore()',
+      'Expected ZpRouteRequest',
     );
   }
 

@@ -33,7 +33,7 @@ class ZpRouteSpec {
   final ZpFallbackType fallbackType;
   final Map<String, ZpRouteParamSpec> params;
 
-  /// Keeps legacy/internal fast-path arguments during migration.
+  /// Keeps page-constructor arguments that are not part of the public schema.
   final bool preserveUnknownParams;
 
   List<String> get paramKeys => params.keys.toList(growable: false);
