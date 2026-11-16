@@ -1,3 +1,14 @@
+## 私有 pub 安装
+
+```yaml
+dependencies:
+  zp_router:
+    hosted: https://pub.zotpaper.cn
+    version: ^1.0.1
+```
+
+先配置私有仓库 token，再执行 `flutter pub get`。本地联调可使用不提交的 `pubspec_overrides.yaml`；发布验证使用无 override 的独立项目。
+
 # ZpRouter
 
 `ZpRouter` is a lightweight Dart routing core for ZotPaper-style modular apps.
