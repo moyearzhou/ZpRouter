@@ -1,0 +1,16 @@
+/.githooks/
+/.github/
+/.idea/
+/.vscode/
+/.fvm/
+/.fvmrc
+/.dart_tool/
+/build/
+/coverage/
+/test/
+/pubspec.lock
+/pubspec_overrides.yaml
+/.flutter-plugins
+/.flutter-plugins-dependencies
+*.iml
+.DS_Store
